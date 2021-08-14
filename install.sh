@@ -1,14 +1,19 @@
 #!/bin/sh
-# Script to deploy dotfiles
+# script to deploy dotfiles
 # by Jitesh
 # LICENSE: GNU GPLv3
+#
+# exit codes
+# 0 success
+# 1 failed to create backup dir
+# 2 dotfiles dir or config file does not exists
 
-# change these varaibles for your use
+# change these variables for your use
 backupdir="${XDG_CACHE_HOME:=$HOME/.cache}/dotfiles-$(date +%y%m%d-%H%M%S)" # path to backup dir
-remoterepo="https://github.com/voidstarsh/dotfiles"                         # URL of remote repo
 dotfilesdir="$HOME/opt/dotfiles"                                            # path to local repo
-remoteconf="$remoterepo/raw/master/installrc.csv"                           # URL of remote config file
 configfile="$dotfilesdir/installrc.csv"                                     # path to local config file
+remoterepo="https://github.com/voidstarsh/dotfiles"                         # URL of remote repo
+remoteconf="$remoterepo/raw/main/installrc.csv"                             # URL of remote config file
 tmpconf="/tmp/installrc.csv"                                                # copy of config file will be used
 
 # pretty output
@@ -21,14 +26,19 @@ c_magenta="\033[1;35m"
 c_cyan="\033[1;36m"
 
 error() {
-    printf "%b==> ERROR:%b %s\n" "$c_red" "$c_reset" "$1"
+    printf "%b==> ERROR%b       : %s\n" "$c_red" "$c_reset" "$1"
 }
 
-# making sure both the dotfiles dir & config file exists
-[ -d "$dotfilesdir" ] || git clone "$remoterepo" "$dotfilesdir" || { error "Unable to clone '$remoterepo' to '$dotfilesdir'"; exit 2; }
-[ -f "$configfile" ] && cp -f "$configfile" "$tmpconf" || curl -fsSL "$remoteconf" > "$tmpconf" || { error "Unable to fetch '$configfile' from '$remoteconf'"; exit 2; }
+# making sure the dotfiles dir, config file, & the backup dir exists
+[ -d "$dotfilesdir" ] || git clone "$remoterepo" "$dotfilesdir" || \
+    { error "Unable to clone '$remoterepo' to '$dotfilesdir'"; exit 2; }
+[ -f "$configfile" ] && cp -f "$configfile" "$tmpconf" || curl -fsSL "$remoteconf" > "$tmpconf" 2>/dev/null || \
+    { error "Unable to fetch '$remoteconf'"; exit 2; }
+mkdir -p "$backupdir" && printf "%b==>%b Creating backup directory '%s'\n" "$c_yellow" "$c_reset" "$backupdir" || \
+    { error "Cannot create directory '$backupdir'"; exit 1; }
 
-mkdir -p "$backupdir" && printf "%b==>%b Creating backup directory '%s'\n" "$c_yellow" "$c_reset" "$backupdir" || { error "Cannot create directory '$backupdir'"; exit 1; }
+# remove the 1st line from installrc.csv
+tail -n +2 "$tmpconf" > "$tmpconf.tmp" && mv -f "$tmpconf.tmp" "$tmpconf"
 total="$(wc -l < $tmpconf)"
 
 while IFS=, read -r link target; do
@@ -40,10 +50,10 @@ while IFS=, read -r link target; do
         # backup existing $link file to $backupdir
         if [ -f "$link" ] || [ -d "$link" ]; then
             cp -Lr "$link" "$backupdir" && rm -rf "$link"
-            printf "%b==>%b Backing up '%s'\n" "$c_green" "$c_reset" "$link"
+            printf "%b==>%b Backing up  : %s\n" "$c_green" "$c_reset" "$link"
         fi
-        ln -s "$target" "$link" || error "Failed to create symbolic link '$target' -> '$link'"
-        n=$((n+1)) && printf "%b==>%b Linked '%s' -> '%s'\n" "$c_blue" "$c_reset" "$target" "$link"
+        ln -s "$target" "$link" 2>/dev/null || { error "Failed to create symbolic link '$target' -> '$link'"; continue; }
+        n=$((n+1)) && printf "%b==>%b Linked      : %s %b->%b %s\n" "$c_blue" "$c_reset" "$target" "$c_blue" "$c_reset" "$link"
     else
         error "No such file or directory '$target'"
     fi

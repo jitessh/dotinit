@@ -1,3 +1,4 @@
+DEPLOY PATH,PATH FROM ROOT OF DOTFILES REPO
 ~/.gitconfig,gitconfig
 ~/.gitignore_global,gitignore_global
 ~/.tmux.conf,tmux.conf
