@@ -5,8 +5,11 @@
 #
 # Exit codes
 # 0 success
-# 1 failed to create backup dir
+# 1 invalid flag
 # 2 dotfiles dir or config file does not exists
+# 3 failed to create backup dir
+
+VERSION="0.1"
 
 # change these variables per your use
 BACKUP_DIR="${XDG_CACHE_HOME:=$HOME/.cache}/dotfiles-$(date +%y%m%d-%H%M%S)"    # path to backup dir
@@ -30,6 +33,54 @@ error() {
     printf "%b==> ERROR%b       : %s\n" "$c_red" "$c_reset" "$1"
 }
 
+print_help() {
+    printf "Usage: dotinit.sh [OPTIONS]\n"
+    printf "OPTIONS:\n"
+    printf "  -h\t\t show this help and exit\n"
+    printf "  -v\t\t print version and exit\n"
+    printf "  -b\t\t backup directory (created recursively)\n"
+    printf "  -c\t\t URL or path to initrc.csv file\n"
+    printf "  -d\t\t URL or path to dotfiles repository\n"
+}
+
+print_version() {
+    printf "dotinit-v%s\n" "$VERSION"
+}
+
+assign_value() {
+    if [ "$2" == "rc" ]; then
+        if echo "$1" | grep -iqE "^https://"; then
+            REMOTE_RC="$1"
+        else
+            DOTFILES_RC="$(readlink -e $1)"
+            [ -f "$DOTFILES_RC" ] || { error "$1 file does not exists"; exit 2; }
+        fi
+    elif [ "$2" == "df" ]; then
+        if echo "$1" | grep -iqE "^https://"; then
+            REMOTE_REPO="$1"
+            DOTFILES_DIR="$HOME/dotfiles"
+        else
+            DOTFILES_DIR="$(readlink -e $1)"
+            [ -d "$DOTFILES_DIR" ] || { error "$1 directory does not exists"; exit 2; }
+        fi
+    fi
+}
+
+while getopts "b:c:d:hv" opt; do
+    case "${opt}" in
+        h)  print_help; exit 0 ;;
+        v)  print_version; exit 0 ;;
+        b)  BACKUP_DIR="${OPTARG}" ;;
+        c)  DOTFILES_RC=""
+            REMOTE_RC=""
+            assign_value "${OPTARG}" "rc" ;;
+        d)  DOTFILES_DIR=""
+            REMOTE_REPO=""
+            assign_value "${OPTARG}" "df" ;;
+        *)  printf "Invalid option: -%s\n" "${OPTARG}" && exit 1 ;;
+    esac
+done
+
 # $DOTFILES_DIR must exist
 [ -d "$DOTFILES_DIR" ] || git clone "$REMOTE_REPO" "$DOTFILES_DIR" || \
     { error "Unable to clone '$REMOTE_REPO' to '$DOTFILES_DIR'"; exit 2; }
@@ -41,7 +92,7 @@ error() {
 
 # $BACKUP_DIR must exist
 mkdir -p "$BACKUP_DIR" && printf "%b==>%b Creating    : %s\n" "$c_yellow" "$c_reset" "$BACKUP_DIR" || \
-    { error "Cannot create directory '$BACKUP_DIR'"; exit 1; }
+    { error "Cannot create directory '$BACKUP_DIR'"; exit 3; }
 
 # remove the 1st line (header) from $tmprc
 tail -n +2 "$tmprc" > "$tmprc.tmp" && mv -f "$tmprc.tmp" "$tmprc"
@@ -56,9 +107,10 @@ while IFS=, read -r link target; do
     if [ -f "$target" ] || [ -d "$target" ]; then
         # backup existing $link file to $BACKUP_DIR
         if [ -f "$link" ] || [ -d "$link" ]; then
-            cp -Lr "$link" "$BACKUP_DIR" && rm -rf "$link"
             printf "%b==>%b Backing up  : %s\n" "$c_green" "$c_reset" "$link"
+            cp -Lr "$link" "$BACKUP_DIR"
         fi
+        rm -rf "$link"
         ln -s "$target" "$link" 2>/dev/null || { error "Failed to create symbolic link '$target' -> '$link'"; continue; }
         printf "%b==>%b Linked      : %s %b->%b %s\n" "$c_blue" "$c_reset" "$target" "$c_blue" "$c_reset" "$link"
         n=$((n+1))
