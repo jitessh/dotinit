@@ -1,7 +1,10 @@
 DEPLOY PATH,PATH FROM ROOT OF DOTFILES REPO
-~/.gitconfig,gitconfig
-~/.gitignore_global,gitignore_global
-~/.tmux.conf,tmux.conf
-~/.vimrc,vimrc
-~/.Xresources,Xresources
-~/.zshrc,zshrc
+~/.config/git,git
+~/.config/shell,shell
+~/.config/tmux,tmux
+~/.config/x11,x11
+~/.config/zathura,zathura
+~/.config/zsh,zsh
+~/.profile,zprofile
+~/.xprofile,xprofile
+~/.zprofile,zprofile
