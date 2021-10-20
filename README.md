@@ -48,7 +48,7 @@ DEPLOY PATH, PATH FROM DOTFILES REPO
 ## Example usage
 - In a fresh system install (`$DOTFILES_DIR` need not exist, `$REMOTE_REPO` will be cloned and deployed):
 ```bash
-sh -c "$(curl -fsSL https://github.com/voidstarsh/dotinit/raw/master/dotinit.sh)"
+sh -c "$(curl -fsSL https://github.com/pixxel8/dotinit/raw/master/dotinit.sh)"
 ```
 - When you add new file in dotfiles repository (uses all the variables set in `dotinit.sh`):
 ```bash
@@ -60,7 +60,7 @@ dotinit.sh -b ~/.cache/dotfile-backup
 ```
 - Deploy from specific remote repository:
 ```bash
-dotinit.sh -d https://github.com/voidstarsh/dotfiles -b ~/.cache/dotfile-backup
+dotinit.sh -d https://github.com/pixxel8/dotfiles -b ~/.cache/dotfile-backup
 ```
 
 # License
